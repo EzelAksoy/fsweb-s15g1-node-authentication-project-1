@@ -1,3 +1,5 @@
+const user_model = require("../users/users-model");
+
 /*
   Kullanıcının sunucuda kayıtlı bir oturumu yoksa
 
@@ -6,8 +8,18 @@
     "message": "Geçemezsiniz!"
   }
 */
-function sinirli() {
-
+function sinirli(req, res, next) {
+  try {
+    if (req.session && req.session.user_id) {
+      next();
+    } else {
+      res.status(401).json({
+        message: "Geçemezsiniz!",
+      });
+    }
+  } catch (error) {
+    next(error);
+  }
 }
 
 /*
@@ -18,8 +30,19 @@ function sinirli() {
     "message": "Username kullaniliyor"
   }
 */
-function usernameBostami() {
-
+async function usernameBostami(req, res, next) {
+  try {
+    let user = await user_model.goreBul({ username: req.body.username });
+    if (user) {
+      res.status(422).json({
+        message: "Username kullaniliyor",
+      });
+    } else {
+      next();
+    }
+  } catch (error) {
+    next(error);
+  }
 }
 
 /*
@@ -30,8 +53,20 @@ function usernameBostami() {
     "message": "Geçersiz kriter"
   }
 */
-function usernameVarmi() {
-
+async function usernameVarmi(req, res, next) {
+  try {
+    let user = await user_model.goreBul({ username: req.body.username });
+    if (!user || user.length === 0) {
+      res.status(401).json({
+        message: "Geçersiz kriter",
+      });
+    } else {
+      req.existUser = user;
+      next();
+    }
+  } catch (error) {
+    next(error);
+  }
 }
 
 /*
@@ -42,8 +77,19 @@ function usernameVarmi() {
     "message": "Şifre 3 karakterden fazla olmalı"
   }
 */
-function sifreGecerlimi() {
-
+async function sifreGecerlimi(req, res, next) {
+  try {
+    let user = await user_model.goreBul({ password: req.body.password });
+    if (!user || req.body.password.length < 3) {
+      res.status(422).json({
+        message: "Şifre 3 karakterden fazla olmalı",
+      });
+    } else next();
+  } catch (error) {
+    next(error);
+  }
 }
 
 // Diğer modüllerde kullanılabilmesi için fonksiyonları "exports" nesnesine eklemeyi unutmayın.
+
+module.exports = { sinirli, usernameBostami, usernameVarmi, sifreGecerlimi };
